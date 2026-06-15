@@ -37,6 +37,8 @@ def register(app) -> None:
             # we only track the group/status here.
             db.set_response(date_str, user, group, None, status=status, auto=False)
             poll.refresh_poll(client, date_str)
+            # If that was the last person, tell the orderer they can order now.
+            poll.maybe_notify_orderer(client, date_str)
         return handler
 
     app.action("choose_veg")(_choose("veg", "in"))

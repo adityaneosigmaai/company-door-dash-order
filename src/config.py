@@ -43,6 +43,7 @@ DEFAULT_SETTINGS = {
     "arrival_time": "12:00",     # the common delivery time everyone orders for
     "skip_weekends": "true",     # don't run Sat/Sun
     "no_response_action": "out", # global default for non-responders: out | last
+    "orderer": "",               # user who places the order; pinged when everyone's responded
     "anchor_monday": "",         # ISO date of week 0 for rotation; auto-set on first menu
 }
 

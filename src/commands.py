@@ -28,6 +28,7 @@ HELP = """*🍱 Lunch bot commands*
 `/lunch link veg <url>` · `/lunch link nonveg <url>` — paste DoorDash group-order links (people add their own dish there)
 `/lunch poll open|close|status` — run the poll manually
 `/lunch arrived` — ping the channel now that food has arrived
+`/lunch orderer @user` — who to tag to place the order once everyone's responded
 `/lunch config [key] [value]` — view/change settings (poll_time, cutoff_time, arrival_time, reminder_time, timezone, skip_weekends, no_response_action)
 `/lunch arrival HH:MM` — shortcut for the common delivery time
 `/lunch admin add @user|list`"""
@@ -121,6 +122,15 @@ def _dispatch(sub, parts, text, command, respond, client, scheduler_reload):
         if poll.announce_arrival(client, today):
             return respond("📣 Pinged the channel that food's here.")
         return respond("Nothing to announce — no open/closed order with people in it today.")
+
+    if sub == "orderer":
+        uid = _first_user(text)
+        if not uid:
+            cur = db.get_setting("orderer") or ""
+            return respond(f"Current orderer: {f'<@{cur}>' if cur else '(unset — admins are tagged)'}. "
+                           f"Set with `/lunch orderer @user`.")
+        db.set_setting("orderer", uid)
+        return respond(f"✅ <@{uid}> will be tagged to place the order once everyone's responded.")
 
     return respond(f"Unknown subcommand `{sub}`. Try `/lunch help`.")
 

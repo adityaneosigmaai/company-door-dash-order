@@ -80,11 +80,15 @@ That's it. From then on the bot runs itself.
 3. **Admin** creates the two DoorDash Group Orders and pastes the links:
    `/lunch link veg https://… ` and `/lunch link nonveg https://…`. The cart
    buttons go live so everyone adds their own item.
-4. **10:30** (`reminder_time`) — non-responders get pinged in-thread.
-5. **11:00** (`cutoff_time`) — poll closes, defaults applied, and a **headcount
+4. The moment the **last person responds**, the bot pings the **orderer**
+   (`/lunch orderer @gagan`, else admins) — "everyone's in, place the orders" —
+   so they don't have to wait for the cutoff. Fires once per day.
+5. **10:30** (`reminder_time`) — non-responders get pinged in-thread.
+6. **11:00** (`cutoff_time`) — poll closes, defaults applied, and a **headcount
    summary** posts per group (who's in + the cart links) with the arrival time.
-   The admin places the orders, setting both delivery times to **12:00**.
-6. **12:00** (`arrival_time`) — the bot pings the channel that food's here,
+   The orderer is pinged here too if they weren't already. They place the orders,
+   setting both delivery times to **12:00**.
+7. **12:00** (`arrival_time`) — the bot pings the channel that food's here,
    tagging everyone in each group. (No DoorDash API = no real delivery
    detection; this fires on schedule. Use `/lunch arrived` to ping early/late.)
 

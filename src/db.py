@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     nonveg_restaurant TEXT,
     veg_url         TEXT,
     nonveg_url      TEXT,
+    orderer_notified INTEGER NOT NULL DEFAULT 0,  -- 1 once the orderer has been pinged
     created_at      TEXT NOT NULL
 );
 
@@ -101,6 +102,10 @@ def connect() -> Iterator[sqlite3.Connection]:
 def init_db() -> None:
     with connect() as conn:
         conn.executescript(SCHEMA)
+        # Lightweight migration for DBs created before orderer_notified existed.
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(sessions)")}
+        if "orderer_notified" not in cols:
+            conn.execute("ALTER TABLE sessions ADD COLUMN orderer_notified INTEGER NOT NULL DEFAULT 0")
         # Seed defaults only for keys that don't exist yet.
         for key, value in config.DEFAULT_SETTINGS.items():
             conn.execute(

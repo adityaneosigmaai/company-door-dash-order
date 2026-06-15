@@ -110,6 +110,56 @@ def non_responders(date_str: str) -> list[str]:
     return [m["user_id"] for m in db.active_members() if m["user_id"] not in responded]
 
 
+def all_responded(date_str: str) -> bool:
+    """True once every active member has a response for the day (in or out)."""
+    members = db.active_members()
+    if not members:
+        return False
+    responded = {r["user_id"] for r in db.responses_for(date_str)}
+    return all(m["user_id"] in responded for m in members)
+
+
+def _orderer_mention() -> str:
+    """Who to tag to place the order — the configured orderer, else all admins."""
+    orderer = db.get_setting("orderer") or ""
+    if orderer:
+        return f"<@{orderer}>"
+    admins = [a for a in (db.get_setting("admins") or "").split(",") if a]
+    return " ".join(f"<@{a}>" for a in admins) or "@here"
+
+
+def maybe_notify_orderer(client: WebClient, date_str: str) -> bool:
+    """Ping the orderer that everyone's responded so they can place the order now.
+    Fires at most once per day (orderer_notified flag). Returns True if it pinged."""
+    s = db.get_session(date_str)
+    if not s or s["status"] == "skipped" or s["orderer_notified"]:
+        return False
+    if not all_responded(date_str):
+        return False
+
+    t = tally(date_str)
+    tag = _orderer_mention()
+    if not t["veg"] and not t["nonveg"]:
+        text = f"📣 {tag} — everyone's responded and *everyone's out today*. No lunch order needed. 🎉"
+    else:
+        lines = [f"📣 {tag} — *everyone's responded, you're clear to place the orders!*"]
+        if t["veg"]:
+            link = f" — <{s['veg_url']}|cart>" if s["veg_url"] else " — _link pending_"
+            lines.append(f"🥗 *{s['veg_restaurant'] or 'Veg'}*: {len(t['veg'])} eating{link}")
+        if t["nonveg"]:
+            link = f" — <{s['nonveg_url']}|cart>" if s["nonveg_url"] else " — _link pending_"
+            lines.append(f"🍗 *{s['nonveg_restaurant'] or 'Non-veg'}*: {len(t['nonveg'])} eating{link}")
+        lines.append(f"Set both delivery times to *{s['arrival_time']}* so it all lands together.")
+        text = "\n".join(lines)
+
+    client.chat_postMessage(
+        channel=s["channel_id"], thread_ts=s["message_ts"] or None,
+        reply_broadcast=bool(s["message_ts"]), text=text,
+    )
+    db.update_session(date_str, orderer_notified=1)
+    return True
+
+
 def send_reminder(client: WebClient, date_str: str) -> None:
     s = db.get_session(date_str)
     if not s or s["status"] != "open":
@@ -190,6 +240,9 @@ def close_poll(client: WebClient, date_str: str) -> None:
     if not s or s["status"] != "open":
         return
     apply_no_response_defaults(date_str)
+    # Everyone now has a response — make sure the orderer got their go-ahead ping
+    # (no-op if they were already pinged when the last person responded early).
+    maybe_notify_orderer(client, date_str)
     t = tally(date_str)
 
     client.chat_postMessage(

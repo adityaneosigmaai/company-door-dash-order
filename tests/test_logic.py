@@ -108,3 +108,56 @@ def test_inactive_member_excluded_from_defaults(mod):
     db.set_member_active("U1", False)
     poll.apply_no_response_defaults("2026-06-15")
     assert db.get_response("2026-06-15", "U1") is None
+
+
+def test_all_responded_only_when_everyone_in(mod):
+    db, poll = mod["db"], mod["poll"]
+    db.upsert_member("U1")
+    db.upsert_member("U2")
+    d = "2026-06-15"
+    assert poll.all_responded(d) is False        # nobody yet
+    db.set_response(d, "U1", "veg", None, "in")
+    assert poll.all_responded(d) is False         # one missing
+    db.set_response(d, "U2", None, None, "out")
+    assert poll.all_responded(d) is True          # everyone accounted for
+
+
+class _FakeClient:
+    def __init__(self):
+        self.messages = []
+
+    def chat_postMessage(self, **k):
+        self.messages.append(k)
+        return {"ts": "1", "channel": k.get("channel")}
+
+
+def test_orderer_pinged_once_when_everyone_responds(mod):
+    db, poll = mod["db"], mod["poll"]
+    db.set_setting("channel_id", "C1")
+    db.set_setting("orderer", "GAGAN")
+    db.create_session("2026-06-15", "C1", "12:00", "Sweetgreen", "Chipotle")
+    db.update_session("2026-06-15", message_ts="111.0")
+    db.upsert_member("U1")
+    db.upsert_member("U2")
+    fc = _FakeClient()
+
+    db.set_response("2026-06-15", "U1", "veg", None, "in")
+    assert poll.maybe_notify_orderer(fc, "2026-06-15") is False   # U2 still out-standing
+    db.set_response("2026-06-15", "U2", "nonveg", None, "in")
+    assert poll.maybe_notify_orderer(fc, "2026-06-15") is True    # now everyone's in
+    assert "<@GAGAN>" in fc.messages[-1]["text"]
+    # Second call is a no-op (flag set) — no double ping.
+    assert poll.maybe_notify_orderer(fc, "2026-06-15") is False
+    assert len(fc.messages) == 1
+
+
+def test_orderer_falls_back_to_admins(mod):
+    db, poll = mod["db"], mod["poll"]
+    db.set_setting("admins", "A1,A2")
+    db.set_setting("channel_id", "C1")
+    db.create_session("2026-06-15", "C1", "12:00", "Sweetgreen", "Chipotle")
+    db.upsert_member("U1")
+    db.set_response("2026-06-15", "U1", "veg", None, "in")
+    fc = _FakeClient()
+    assert poll.maybe_notify_orderer(fc, "2026-06-15") is True
+    assert "<@A1>" in fc.messages[-1]["text"] and "<@A2>" in fc.messages[-1]["text"]
