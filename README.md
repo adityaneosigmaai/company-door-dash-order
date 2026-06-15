@@ -19,7 +19,7 @@ a human:
 | Posts the daily poll, splits veg / non-veg | Creates the two DoorDash **Group Orders** in the DoorDash app |
 | Collects choices, handles swaps & opt-outs | Pastes the two share links into Slack (`/lunch link …`) |
 | Reminds non-responders, applies defaults | Each person adds their item to their group's cart |
-| Tallies an itemized summary per group | An admin reviews and **places** each group order |
+| Tallies a headcount summary per group | An admin reviews and **places** each group order |
 | Shows one arrival time for both groups | Sets both delivery times to that arrival time |
 
 This is the only honest design — anything claiming to "auto-order from DoorDash"
@@ -56,11 +56,13 @@ Run these once. The **first person to use `/lunch` becomes the admin.**
 /lunch member add @alice veg
 /lunch member add @bob nonveg
 /lunch member add @carol either
-/lunch menu set 0 mon veg     Sweetgreen :: Harvest Bowl, Kale Caesar, Guacamole Greens
-/lunch menu set 0 mon nonveg  Chipotle   :: Chicken Bowl, Steak Burrito, Carnitas Tacos
-/lunch menu set 0 tue veg     Cava       :: Greens & Grains, Falafel Pita
-/lunch menu set 0 tue nonveg  Halal Guys :: Chicken over Rice, Gyro Platter
+/lunch menu set 0 mon veg     Sweetgreen
+/lunch menu set 0 mon nonveg  Chipotle
+/lunch menu set 0 tue veg     Cava
+/lunch menu set 0 tue nonveg  Halal Guys
 # …repeat for each weekday. Add week 1, week 2… to rotate.
+# (You can append ":: item1, item2" as a reference list, but it's optional —
+#  people pick their actual dish in the DoorDash cart, not in Slack.)
 /lunch arrival 12:30
 /lunch setup                   # shows a checklist of what's done
 ```
@@ -72,16 +74,16 @@ That's it. From then on the bot runs itself.
 ## Daily flow
 
 1. **10:00** (`poll_time`) — bot posts the poll to your channel:
-   veg/non-veg/out buttons, item pickers, and two "🛒 cart" buttons.
-2. People click. Clicking a different group **swaps**; an item picker attaches
-   their dish. The roster updates live.
+   veg/non-veg/out buttons and two "🛒 cart" buttons.
+2. People tap their group (tap a different one to **swap**), then click their
+   group's 🛒 link and **add their own dish in DoorDash**. The roster updates live.
 3. **Admin** creates the two DoorDash Group Orders and pastes the links:
    `/lunch link veg https://… ` and `/lunch link nonveg https://…`. The cart
    buttons go live so everyone adds their own item.
 4. **10:30** (`reminder_time`) — non-responders get pinged in-thread.
-5. **11:00** (`cutoff_time`) — poll closes, defaults applied, and a consolidated
-   **itemized summary** posts per group with the arrival time. The admin places
-   the orders, setting both delivery times to the arrival time (**12:00**).
+5. **11:00** (`cutoff_time`) — poll closes, defaults applied, and a **headcount
+   summary** posts per group (who's in + the cart links) with the arrival time.
+   The admin places the orders, setting both delivery times to **12:00**.
 6. **12:00** (`arrival_time`) — the bot pings the channel that food's here,
    tagging everyone in each group. (No DoorDash API = no real delivery
    detection; this fires on schedule. Use `/lunch arrived` to ping early/late.)
@@ -98,7 +100,7 @@ That's it. From then on the bot runs itself.
 | `/lunch member add @u [veg\|nonveg\|either]` | Add a participant |
 | `/lunch member remove @u` / `list` | Manage members |
 | `/lunch member default @u veg\|nonveg\|either` | Set someone's default group |
-| `/lunch menu set <wk#> <mon..sun> <veg\|nonveg> <Restaurant> :: a, b, c` | Define a rotating menu slot |
+| `/lunch menu set <wk#> <mon..sun> <veg\|nonveg> <Restaurant>` | Set a day's restaurant (rotating) |
 | `/lunch menu show` / `clear` | View / reset the menu |
 | `/lunch link veg\|nonveg <url>` | Attach today's DoorDash group-order link |
 | `/lunch poll open\|close\|status` | Run the poll manually |

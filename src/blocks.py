@@ -30,9 +30,11 @@ def _link_or_pending(label: str, url: Optional[str]) -> dict:
 def poll_blocks(*, date_str: str, arrival_time: str,
                 veg_restaurant: Optional[str], nonveg_restaurant: Optional[str],
                 veg_url: Optional[str], nonveg_url: Optional[str],
-                veg_options: list[str], nonveg_options: list[str],
                 tally: dict) -> list[dict]:
-    """Build the interactive poll message. `tally` comes from poll.tally()."""
+    """Build the interactive poll message. `tally` comes from poll.tally().
+
+    People pick a group with one tap, then click their group's 🛒 DoorDash link
+    to add their own dish in DoorDash — no dish selection happens in Slack."""
     veg_count = len(tally["veg"])
     nonveg_count = len(tally["nonveg"])
     out_count = len(tally["out"])
@@ -47,8 +49,9 @@ def poll_blocks(*, date_str: str, arrival_time: str,
          "text": {"type": "plain_text", "text": f"🍱 Lunch order — {date_str}"}},
         {"type": "section",
          "text": {"type": "mrkdwn",
-                  "text": f"Pick your group below. All food arrives at *{arrival_time}* "
-                          f"so we eat together. Tap again to swap, or 🙅 to opt out."}},
+                  "text": f"Pick your group, then tap your 🛒 cart link to add your "
+                          f"order in DoorDash. All food arrives at *{arrival_time}* so we "
+                          f"eat together. Tap again to swap, or 🙅 to opt out."}},
         {"type": "section", "text": {"type": "mrkdwn", "text": f"{veg_line}\n{nonveg_line}"}},
         {"type": "actions", "elements": [
             {"type": "button", "text": {"type": "plain_text", "text": f"🥗 Veg ({veg_count})"},
@@ -60,28 +63,7 @@ def poll_blocks(*, date_str: str, arrival_time: str,
         ]},
     ]
 
-    # Item pickers (optional — only if options were defined for the group).
-    item_elems = []
-    if veg_options:
-        item_elems.append({
-            "type": "static_select",
-            "placeholder": {"type": "plain_text", "text": "🥗 Pick a veg item"},
-            "action_id": "pick_item_veg",
-            "options": [{"text": {"type": "plain_text", "text": o[:75]}, "value": o[:150]}
-                        for o in veg_options[:100]],
-        })
-    if nonveg_options:
-        item_elems.append({
-            "type": "static_select",
-            "placeholder": {"type": "plain_text", "text": "🍗 Pick a non-veg item"},
-            "action_id": "pick_item_nonveg",
-            "options": [{"text": {"type": "plain_text", "text": o[:75]}, "value": o[:150]}
-                        for o in nonveg_options[:100]],
-        })
-    if item_elems:
-        blocks.append({"type": "actions", "elements": item_elems})
-
-    # DoorDash group-order links.
+    # DoorDash group-order links — this is where each person adds their dish.
     blocks.append({"type": "actions", "elements": [
         _link_or_pending("Veg", veg_url),
         _link_or_pending("Non-veg", nonveg_url),
@@ -104,8 +86,6 @@ def _roster_line(tally: dict) -> str:
 
 def _fmt(r) -> str:
     mention = f"<@{r['user_id']}>"
-    if r["item"]:
-        mention += f" ({r['item']})"
     if r["auto"]:
         mention += " ·auto"
     return mention
@@ -114,18 +94,14 @@ def _fmt(r) -> str:
 def summary_blocks(*, date_str: str, arrival_time: str, tally: dict,
                    veg_restaurant: Optional[str], nonveg_restaurant: Optional[str],
                    veg_url: Optional[str], nonveg_url: Optional[str]) -> list[dict]:
-    """The consolidated, itemized order posted at cutoff."""
+    """The headcount summary posted at cutoff. Actual dishes live in the DoorDash
+    group cart — this just confirms who's in each group + links the carts."""
     def group_section(label, emoji, rows, restaurant, url) -> str:
         if not rows:
             return f"{emoji} *{label}* — nobody today."
-        lines = [f"{emoji} *{label}* — {restaurant or '?'} · {len(rows)} order(s)"]
-        # Aggregate identical items for whoever places the order.
-        counts: dict[str, list[str]] = {}
-        for r in rows:
-            key = r["item"] or "_(no item picked — add in cart)_"
-            counts.setdefault(key, []).append(f"<@{r['user_id']}>")
-        for item, who in counts.items():
-            lines.append(f"   • *{len(who)}×* {item} — {', '.join(who)}")
+        who = ", ".join(f"<@{r['user_id']}>" for r in rows)
+        lines = [f"{emoji} *{label}* — {restaurant or '?'} · *{len(rows)}* eating",
+                 f"   {who}"]
         if url:
             lines.append(f"   🛒 <{url}|Open {label} group cart>")
         return "\n".join(lines)

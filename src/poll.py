@@ -30,14 +30,13 @@ def tally(date_str: str) -> dict:
 
 
 def _menu_bits(target: date):
+    """The two restaurants for the date (or None each if unset)."""
     m = menu.menu_for_date(target)
     veg = m["veg"] if m else None
     nonveg = m["nonveg"] if m else None
     return (
         veg["restaurant"] if veg else None,
         nonveg["restaurant"] if nonveg else None,
-        veg["options"] if veg else [],
-        nonveg["options"] if nonveg else [],
     )
 
 
@@ -66,11 +65,11 @@ def open_poll(client: WebClient, target: date) -> Optional[str]:
     if existing and existing["status"] != "skipped" and existing["message_ts"]:
         return existing["message_ts"]  # already open — don't double-post
 
-    veg_r, nonveg_r, veg_o, nonveg_o = _menu_bits(target)
+    veg_r, nonveg_r = _menu_bits(target)
     if not veg_r and not nonveg_r:
         return None  # nothing on the menu — caller alerts admin
 
-    arrival = db.get_setting("arrival_time") or "12:30"
+    arrival = db.get_setting("arrival_time") or "12:00"
     db.create_session(date_str, channel, arrival, veg_r or "", nonveg_r or "")
 
     resp = client.chat_postMessage(
@@ -80,7 +79,6 @@ def open_poll(client: WebClient, target: date) -> Optional[str]:
             date_str=date_str, arrival_time=arrival,
             veg_restaurant=veg_r, nonveg_restaurant=nonveg_r,
             veg_url=None, nonveg_url=None,
-            veg_options=veg_o, nonveg_options=nonveg_o,
             tally=tally(date_str),
         ),
     )
@@ -93,8 +91,6 @@ def refresh_poll(client: WebClient, date_str: str) -> None:
     s = db.get_session(date_str)
     if not s or s["status"] != "open" or not s["message_ts"]:
         return
-    target = date.fromisoformat(date_str)
-    _, _, veg_o, nonveg_o = _menu_bits(target)
     client.chat_update(
         channel=s["channel_id"], ts=s["message_ts"],
         text=f"Lunch order for {date_str}",
@@ -102,7 +98,6 @@ def refresh_poll(client: WebClient, date_str: str) -> None:
             date_str=date_str, arrival_time=s["arrival_time"],
             veg_restaurant=s["veg_restaurant"], nonveg_restaurant=s["nonveg_restaurant"],
             veg_url=s["veg_url"], nonveg_url=s["nonveg_url"],
-            veg_options=veg_o, nonveg_options=nonveg_o,
             tally=tally(date_str),
         ),
     )

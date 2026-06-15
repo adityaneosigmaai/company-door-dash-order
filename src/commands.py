@@ -23,9 +23,9 @@ HELP = """*🍱 Lunch bot commands*
 `/lunch member add @user [veg|nonveg|either]` — add a participant
 `/lunch member remove @user` · `/lunch member list`
 `/lunch member default @user veg|nonveg|either`
-`/lunch menu set <week#> <mon..sun> <veg|nonveg> <Restaurant> :: item1, item2`
+`/lunch menu set <week#> <mon..sun> <veg|nonveg> <Restaurant>` — set the day's restaurant
 `/lunch menu show` · `/lunch menu clear`
-`/lunch link veg <url>` · `/lunch link nonveg <url>` — paste DoorDash group-order links
+`/lunch link veg <url>` · `/lunch link nonveg <url>` — paste DoorDash group-order links (people add their own dish there)
 `/lunch poll open|close|status` — run the poll manually
 `/lunch arrived` — ping the channel now that food has arrived
 `/lunch config [key] [value]` — view/change settings (poll_time, cutoff_time, arrival_time, reminder_time, timezone, skip_weekends, no_response_action)
