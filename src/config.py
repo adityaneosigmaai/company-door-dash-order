@@ -38,9 +38,9 @@ DEFAULT_SETTINGS = {
     "timezone": os.environ.get("TZ", "America/Los_Angeles"),
     "channel_id": "",            # set via `/lunch channel` (the channel the poll posts to)
     "poll_time": "10:00",        # when the daily poll opens (HH:MM, local tz)
-    "reminder_time": "11:15",    # when non-responders get pinged
-    "cutoff_time": "11:30",      # when the poll closes and the summary posts
-    "arrival_time": "12:30",     # the common delivery time everyone orders for
+    "reminder_time": "10:30",    # when non-responders get pinged
+    "cutoff_time": "11:00",      # when the poll closes and the summary posts
+    "arrival_time": "12:00",     # the common delivery time everyone orders for
     "skip_weekends": "true",     # don't run Sat/Sun
     "no_response_action": "out", # global default for non-responders: out | last
     "anchor_monday": "",         # ISO date of week 0 for rotation; auto-set on first menu

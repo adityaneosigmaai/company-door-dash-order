@@ -78,10 +78,10 @@ That's it. From then on the bot runs itself.
 3. **Admin** creates the two DoorDash Group Orders and pastes the links:
    `/lunch link veg https://… ` and `/lunch link nonveg https://…`. The cart
    buttons go live so everyone adds their own item.
-4. **11:15** (`reminder_time`) — non-responders get pinged in-thread.
-5. **11:30** (`cutoff_time`) — poll closes, defaults applied, and a consolidated
+4. **10:30** (`reminder_time`) — non-responders get pinged in-thread.
+5. **11:00** (`cutoff_time`) — poll closes, defaults applied, and a consolidated
    **itemized summary** posts per group with the arrival time. The admin places
-   the orders, setting both delivery times to the arrival time.
+   the orders, setting both delivery times to the arrival time (**12:00**).
 
 ---
 
