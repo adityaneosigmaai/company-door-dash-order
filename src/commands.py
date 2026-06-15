@@ -27,6 +27,7 @@ HELP = """*🍱 Lunch bot commands*
 `/lunch menu show` · `/lunch menu clear`
 `/lunch link veg <url>` · `/lunch link nonveg <url>` — paste DoorDash group-order links
 `/lunch poll open|close|status` — run the poll manually
+`/lunch arrived` — ping the channel now that food has arrived
 `/lunch config [key] [value]` — view/change settings (poll_time, cutoff_time, arrival_time, reminder_time, timezone, skip_weekends, no_response_action)
 `/lunch arrival HH:MM` — shortcut for the common delivery time
 `/lunch admin add @user|list`"""
@@ -103,15 +104,23 @@ def _dispatch(sub, parts, text, command, respond, client, scheduler_reload):
 
     if sub == "arrival":
         if len(parts) < 2:
-            return respond("Usage: `/lunch arrival 12:30`")
+            return respond("Usage: `/lunch arrival 12:00`")
         db.set_setting("arrival_time", parts[1])
-        return respond(f"✅ Arrival time set to {parts[1]} for both groups.")
+        scheduler_reload()  # the arrival ping is scheduled, so reschedule it
+        return respond(f"✅ Arrival time set to {parts[1]} for both groups "
+                       f"(channel gets pinged then).")
 
     if sub == "config":
         return _config(parts, respond, scheduler_reload)
 
     if sub == "poll":
         return _poll(parts, respond, client)
+
+    if sub == "arrived":
+        today = timeutil.today().isoformat()
+        if poll.announce_arrival(client, today):
+            return respond("📣 Pinged the channel that food's here.")
+        return respond("Nothing to announce — no open/closed order with people in it today.")
 
     return respond(f"Unknown subcommand `{sub}`. Try `/lunch help`.")
 
@@ -235,7 +244,7 @@ def _config(parts, respond, scheduler_reload):
     if key not in db.all_settings():
         return respond(f"Unknown setting `{key}`. Run `/lunch config` to list them.")
     db.set_setting(key, value)
-    if key in ("poll_time", "reminder_time", "cutoff_time", "timezone"):
+    if key in ("poll_time", "reminder_time", "cutoff_time", "arrival_time", "timezone"):
         scheduler_reload()
     return respond(f"✅ `{key}` = {value}")
 

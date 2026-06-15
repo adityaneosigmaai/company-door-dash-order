@@ -27,14 +27,15 @@ class LunchScheduler:
 
     def reload(self) -> None:
         """Re-create the three daily jobs from current settings."""
-        for job_id in ("open", "remind", "close"):
+        for job_id in ("open", "remind", "close", "arrived"):
             j = self.sched.get_job(job_id)
             if j:
                 j.remove()
         self.sched.configure(timezone=str(timeutil.tz()))
         ph, pm = timeutil.parse_hhmm(db.get_setting("poll_time") or "10:00")
-        rh, rm = timeutil.parse_hhmm(db.get_setting("reminder_time") or "11:15")
-        ch, cm = timeutil.parse_hhmm(db.get_setting("cutoff_time") or "11:30")
+        rh, rm = timeutil.parse_hhmm(db.get_setting("reminder_time") or "10:30")
+        ch, cm = timeutil.parse_hhmm(db.get_setting("cutoff_time") or "11:00")
+        ah, am = timeutil.parse_hhmm(db.get_setting("arrival_time") or "12:00")
         tz = str(timeutil.tz())
         self.sched.add_job(self._open, CronTrigger(hour=ph, minute=pm, timezone=tz),
                            id="open", replace_existing=True)
@@ -42,6 +43,8 @@ class LunchScheduler:
                            id="remind", replace_existing=True)
         self.sched.add_job(self._close, CronTrigger(hour=ch, minute=cm, timezone=tz),
                            id="close", replace_existing=True)
+        self.sched.add_job(self._arrived, CronTrigger(hour=ah, minute=am, timezone=tz),
+                           id="arrived", replace_existing=True)
 
     # --- jobs --------------------------------------------------------------
 
@@ -57,6 +60,9 @@ class LunchScheduler:
 
     def _close(self) -> None:
         poll.close_poll(self.client, timeutil.today().isoformat())
+
+    def _arrived(self) -> None:
+        poll.announce_arrival(self.client, timeutil.today().isoformat())
 
     # --- helpers -----------------------------------------------------------
 

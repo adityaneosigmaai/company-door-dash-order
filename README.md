@@ -82,6 +82,9 @@ That's it. From then on the bot runs itself.
 5. **11:00** (`cutoff_time`) — poll closes, defaults applied, and a consolidated
    **itemized summary** posts per group with the arrival time. The admin places
    the orders, setting both delivery times to the arrival time (**12:00**).
+6. **12:00** (`arrival_time`) — the bot pings the channel that food's here,
+   tagging everyone in each group. (No DoorDash API = no real delivery
+   detection; this fires on schedule. Use `/lunch arrived` to ping early/late.)
 
 ---
 
@@ -99,6 +102,7 @@ That's it. From then on the bot runs itself.
 | `/lunch menu show` / `clear` | View / reset the menu |
 | `/lunch link veg\|nonveg <url>` | Attach today's DoorDash group-order link |
 | `/lunch poll open\|close\|status` | Run the poll manually |
+| `/lunch arrived` | Ping the channel that food has arrived |
 | `/lunch arrival HH:MM` | Set the shared delivery time |
 | `/lunch config [key] [value]` | View/change settings |
 | `/lunch admin add @u\|list` | Manage admins |

@@ -156,6 +156,39 @@ def apply_no_response_defaults(date_str: str) -> None:
                             status="in" if grp else "out", auto=True)
 
 
+def announce_arrival(client: WebClient, date_str: str) -> bool:
+    """Ping the channel that food has arrived, tagging everyone in each group.
+
+    Returns False (and posts nothing) if there's no real order to announce — no
+    session, a skipped day, or nobody in. The bot can't detect actual delivery
+    (no DoorDash API), so this fires on the scheduled arrival time or on demand
+    via `/lunch arrived`. Idempotent-ish: safe to call again, it just re-pings.
+    """
+    s = db.get_session(date_str)
+    if not s or s["status"] == "skipped" or not s["channel_id"]:
+        return False
+    t = tally(date_str)
+    if not t["veg"] and not t["nonveg"]:
+        return False
+
+    lines = [f"🍱 *Lunch has arrived — come grab it!* (it's {s['arrival_time']})"]
+    if t["veg"]:
+        who = " ".join(f"<@{r['user_id']}>" for r in t["veg"])
+        lines.append(f"🥗 *{s['veg_restaurant'] or 'Veg'}*: {who}")
+    if t["nonveg"]:
+        who = " ".join(f"<@{r['user_id']}>" for r in t["nonveg"])
+        lines.append(f"🍗 *{s['nonveg_restaurant'] or 'Non-veg'}*: {who}")
+    lines.append("Both orders are in — see you in the kitchen 🎉")
+
+    client.chat_postMessage(
+        channel=s["channel_id"],
+        thread_ts=s["message_ts"] or None,
+        reply_broadcast=bool(s["message_ts"]),  # show in-channel even though threaded
+        text="\n".join(lines),
+    )
+    return True
+
+
 def close_poll(client: WebClient, date_str: str) -> None:
     """Apply defaults, post the consolidated summary, mark closed, and freeze the poll."""
     s = db.get_session(date_str)
