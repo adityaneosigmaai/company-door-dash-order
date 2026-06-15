@@ -1,0 +1,28 @@
+# Slack app manifest — paste at https://api.slack.com/apps > Create New App > From a manifest.
+# This grants exactly the scopes the bot uses and registers the /lunch command.
+display_information:
+  name: Lunch Bot
+  description: Daily DoorDash group-order poll for veg + non-veg groups.
+  background_color: "#e8543f"
+features:
+  bot_user:
+    display_name: lunchbot
+    always_online: true
+  slash_commands:
+    - command: /lunch
+      description: Manage the daily lunch order
+      usage_hint: "help | setup | poll open | menu show"
+      should_escape: false
+oauth_config:
+  scopes:
+    bot:
+      - chat:write          # post & update the poll/summary
+      - commands            # the /lunch slash command
+      - im:write            # DM admins with alerts
+      - users:read          # resolve display names
+settings:
+  interactivity:
+    is_enabled: true        # required for buttons/selects
+  socket_mode_enabled: true # no public URL needed
+  org_deploy_enabled: false
+  token_rotation_enabled: false
